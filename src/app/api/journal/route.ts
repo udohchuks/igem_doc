@@ -6,10 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { PDFParse } = require("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
-  await parser.load();
-  const data = await parser.getText();
+  const pdf = require("pdf-parse");
+  const data = await pdf(buffer);
   return data.text;
 }
 
