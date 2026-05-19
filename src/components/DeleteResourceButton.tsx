@@ -7,7 +7,7 @@ export function DeleteResourceButton({ resourceId }: { resourceId: string }) {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this resource? This will remove it from the database and Google Drive permanently.')) {
+    if (!confirm('Are you sure you want to delete this resource? This will remove it permanently.')) {
       return
     }
 
