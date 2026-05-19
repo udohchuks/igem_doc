@@ -33,10 +33,10 @@ export default async function MapViewPage({ params }: { params: Promise<{ id: st
   }))
 
   return (
-    <div className="p-8 h-full flex flex-col">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-white">Knowledge Map</h2>
-        <p className="text-gray-500 text-sm">Visualizing AI-detected semantic relationships.</p>
+    <div className="p-4 sm:p-6 lg:p-8 h-full flex flex-col min-h-0">
+      <div className="mb-3 sm:mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-white">Knowledge Map</h2>
+        <p className="text-gray-500 text-xs sm:text-sm">Visualizing AI-detected semantic relationships.</p>
       </div>
       
       <MapGraph nodes={nodes} links={links} />

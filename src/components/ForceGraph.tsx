@@ -54,7 +54,7 @@ export function MapGraph({ nodes, links }: { nodes: Node[], links: Link[] }) {
   }, [])
 
   return (
-    <div ref={containerRef} className="w-full h-[calc(100vh-140px)] bg-[#0a0e14] rounded-xl border border-white/[0.06] overflow-hidden">
+    <div ref={containerRef} className="w-full flex-1 min-h-[300px] bg-[#0a0e14] rounded-xl border border-white/[0.06] overflow-hidden">
       <ForceGraph2D
         ref={fgRef}
         width={dimensions.width}
