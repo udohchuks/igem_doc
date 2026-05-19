@@ -1,0 +1,181 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+  z-index: 10;
+  padding-bottom: 4rem;
+}
+
+.header {
+  border-bottom: 1px solid hsl(var(--border));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(8, 12, 16, 0.6);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.headerContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 4.5rem;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logoIcon {
+  width: 2rem;
+  height: 2rem;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #070a0e;
+  font-size: 1.1rem;
+}
+
+.logoText {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.dashboard {
+  max-width: 900px;
+  margin: 4rem auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0 1rem;
+}
+
+.arrowDown {
+  display: flex;
+  justify-content: center;
+  color: #888;
+  height: 20px;
+  align-items: center;
+}
+
+/* Layer Base Styles */
+.layer {
+  border-radius: 12px;
+  padding: 2rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.layerHeader {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.layerTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.layerSubtitle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.card {
+  background: transparent;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #fff;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease;
+  min-width: 140px;
+  flex: 1;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+/* Specific Layer Colors */
+.layerInput {
+  background-color: #0d4632;
+  border: 1px solid #137a5b;
+}
+
+.cardInput {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.cardInput:hover { background: rgba(255, 255, 255, 0.1); }
+
+
+.layerProcessing {
+  background-color: #3f367e;
+  border: 1px solid #5a4fbc;
+}
+
+.cardProcessing {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.cardProcessing:hover { background: rgba(255, 255, 255, 0.1); }
+
+
+.layerStorage {
+  background-color: #434140;
+  border: 1px solid #6b6865;
+}
+
+.cardStorage {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.cardStorage:hover { background: rgba(255, 255, 255, 0.1); }
+
+
+.layerViews {
+  background-color: #0c3e6b;
+  border: 1px solid #1664a7;
+}
+
+.cardViews {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.cardViews:hover { background: rgba(255, 255, 255, 0.1); }
+.cardViews span { display: block; font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-top: 0.25rem; }
+
+
+.layerCollab {
+  background-color: #6d2c16;
+  border: 1px solid #993b1b;
+}
+
+.cardCollab {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.cardCollab:hover { background: rgba(255, 255, 255, 0.1); }
