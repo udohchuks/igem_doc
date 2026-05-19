@@ -10,16 +10,12 @@ export default async function MapViewPage({ params }: { params: Promise<{ id: st
     .from(resources)
     .where(eq(resources.workspaceId, workspaceId))
 
-  // Fetch connections where source is in this workspace
-  // (Assuming auto connections are intra-workspace)
   const resourceIds = allResources.map(r => r.id)
   
   let allLinks: any[] = []
   if (resourceIds.length > 0) {
     const fetchedLinks = await db.select()
       .from(connections)
-      
-    // Filter in JS for simplicity (assuming small scale for now)
     allLinks = fetchedLinks.filter(l => resourceIds.includes(l.sourceId))
   }
 
@@ -39,8 +35,8 @@ export default async function MapViewPage({ params }: { params: Promise<{ id: st
   return (
     <div className="p-8 h-full flex flex-col">
       <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Knowledge Map</h2>
-        <p className="text-gray-500">Visualizing AI-detected semantic relationships.</p>
+        <h2 className="text-2xl font-bold text-white">Knowledge Map</h2>
+        <p className="text-gray-500 text-sm">Visualizing AI-detected semantic relationships.</p>
       </div>
       
       <MapGraph nodes={nodes} links={links} />

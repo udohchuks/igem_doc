@@ -64,7 +64,7 @@ export default async function WorkspaceDetailLayout({
         </nav>
       </aside>
       
-      <main className="flex-1 bg-gray-50 overflow-y-auto">
+      <main className="flex-1 bg-[#0a0e14] overflow-y-auto">
         {children}
       </main>
     </div>

@@ -23,11 +23,8 @@ export default async function HomePage() {
             <span className="text-xl font-bold text-white tracking-tight">Scholarly</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm text-gray-400 hover:text-white transition px-4 py-2">
-              Sign in
-            </Link>
             <Link href="/login" className="text-sm bg-emerald-500 hover:bg-emerald-400 text-[#0a0e14] font-semibold px-5 py-2.5 rounded-xl transition shadow-lg shadow-emerald-500/20">
-              Get Started
+              Sign In
             </Link>
           </div>
         </div>

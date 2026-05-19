@@ -10,7 +10,6 @@ export default async function WorkspacesPage() {
 
   if (!user) return redirect('/login')
 
-  // Fetch workspaces the user is a member of
   const memberRecords = await db.select()
     .from(workspaceMembers)
     .where(eq(workspaceMembers.userId, user.id))
@@ -24,29 +23,39 @@ export default async function WorkspacesPage() {
   }
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Your Workspaces</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {userWorkspaces.map(ws => (
-          <a key={ws.id} href={`/workspaces/${ws.id}`} className="block p-6 bg-white border rounded-lg shadow hover:bg-gray-50 transition">
-            <h3 className="font-semibold text-lg">{ws.name}</h3>
-            <span className="text-sm text-gray-500 uppercase tracking-wide">{ws.role}</span>
-          </a>
-        ))}
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold text-white mb-1">Your Workspaces</h2>
+        <p className="text-gray-500 text-sm">Manage your research knowledge bases</p>
       </div>
+      
+      {userWorkspaces.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {userWorkspaces.map(ws => (
+            <a key={ws.id} href={`/workspaces/${ws.id}`} className="block bg-white/[0.03] border border-white/[0.06] rounded-xl p-6 hover:border-emerald-500/30 hover:bg-white/[0.05] transition group">
+              <h3 className="font-semibold text-white text-lg group-hover:text-emerald-400 transition">{ws.name}</h3>
+              <span className="text-xs text-gray-500 uppercase tracking-wide">{ws.role}</span>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-8 text-center">
+          <p className="text-gray-400 mb-2">You haven't joined any workspaces yet.</p>
+          <p className="text-gray-500 text-sm">Create one below or ask a team member to invite you.</p>
+        </div>
+      )}
 
-      <div className="bg-white p-6 rounded-lg shadow max-w-md border">
-        <h3 className="text-lg font-bold mb-4">Create New Workspace</h3>
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-6 max-w-md">
+        <h3 className="text-lg font-bold text-white mb-4">Create New Workspace</h3>
         <form action="/api/workspaces" method="post" className="flex flex-col gap-4">
           <input 
             type="text" 
             name="name" 
-            placeholder="Workspace Name" 
+            placeholder="Workspace name" 
             required
-            className="border rounded px-4 py-2"
+            className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition text-sm"
           />
-          <button type="submit" className="bg-blue-600 text-white font-medium py-2 px-4 rounded hover:bg-blue-700">
+          <button type="submit" className="bg-emerald-500 hover:bg-emerald-400 text-[#0a0e14] font-semibold py-3 px-4 rounded-xl transition text-sm shadow-lg shadow-emerald-500/20">
             Create Workspace
           </button>
         </form>

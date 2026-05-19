@@ -17,13 +17,13 @@ export default async function WorkspacesLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center border-b">
-        <h1 className="text-xl font-bold text-gray-900">Scholarly</h1>
+    <div className="min-h-screen bg-[#0a0e14] flex flex-col">
+      <header className="bg-[#0d1117] border-b border-white/5 px-6 py-4 flex justify-between items-center">
+        <h1 className="text-xl font-bold text-white">Scholarly</h1>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">{user.email}</span>
+          <span className="text-sm text-gray-500">{user.email}</span>
           <form action="/auth/signout" method="post">
-            <button className="text-sm text-red-600 hover:underline">Sign out</button>
+            <button className="text-sm text-gray-400 hover:text-red-400 transition">Sign out</button>
           </form>
         </div>
       </header>
