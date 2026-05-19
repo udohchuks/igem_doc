@@ -112,6 +112,16 @@ export default function JournalPage({ params }: { params: Promise<{ id: string }
     })
   }, [workspaceId])
 
+  // Auto-dismiss errors after 6 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null)
+      }, 6000)
+      return () => clearTimeout(timer)
+    }
+  }, [error])
+
   const handleDeleteContribution = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this contribution?")) return
     setActionLoadingId(id)
@@ -318,9 +328,19 @@ export default function JournalPage({ params }: { params: Promise<{ id: string }
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm flex items-start gap-3 animate-in fade-in duration-200">
-          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-          <span>{error}</span>
+        <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm flex items-start justify-between gap-3 animate-in fade-in duration-200">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setError(null)}
+            className="p-1 hover:bg-white/5 rounded text-red-400/70 hover:text-red-400 active:scale-95 transition"
+            title="Dismiss error"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
