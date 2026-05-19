@@ -41,28 +41,27 @@ export default async function WorkspaceDetailLayout({
   ]
 
   return (
-    <div className="flex h-[calc(100vh-73px)] -m-6">
-      <aside className="w-64 bg-gray-900 text-white flex flex-col">
-        <div className="p-4 border-b border-gray-800">
-          <h2 className="font-bold text-lg truncate">{workspaceName}</h2>
-          <span className="text-xs text-gray-400 capitalize">{memberRecords[0].role}</span>
+    <div className="flex flex-col h-[calc(100vh-73px)] -m-6">
+      <div className="bg-gray-900 border-b border-gray-800 px-6 pt-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="font-bold text-white text-lg">{workspaceName}</h2>
+            <span className="text-xs text-gray-500 capitalize">{memberRecords[0].role}</span>
+          </div>
         </div>
-        <nav className="flex-1 py-4">
-          <ul className="space-y-1 px-2">
-            {navItems.map((item) => (
-              <li key={item.name}>
-                <Link 
-                  href={item.href} 
-                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-800 transition text-sm font-medium"
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
+        <div className="flex gap-1 overflow-x-auto">
+          {navItems.map((item) => (
+            <Link 
+              key={item.name}
+              href={item.href} 
+              className="flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-sm font-medium transition hover:bg-gray-800 hover:text-white text-gray-400"
+            >
+              <item.icon className="w-4 h-4" />
+              {item.name}
+            </Link>
+          ))}
+        </div>
+      </div>
       
       <main className="flex-1 bg-gray-50 overflow-y-auto">
         {children}

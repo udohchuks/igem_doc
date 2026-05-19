@@ -83,7 +83,7 @@ export async function initializeDriveWorkspace() {
 export async function uploadDocumentToWorkspace(
   fileName: string, 
   mimeType: string, 
-  contentStream: any, 
+  content: Buffer | NodeJS.ReadableStream, 
   parentFolderId: string
 ) {
   const fileMetadata = {
@@ -93,7 +93,7 @@ export async function uploadDocumentToWorkspace(
 
   const media = {
     mimeType: mimeType,
-    body: contentStream,
+    body: content,
   };
 
   const response = await drive.files.create({

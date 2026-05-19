@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/client";
 import { resources } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { uploadDocumentToWorkspace, SHARED_FOLDER_ID } from "@/lib/drive";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,10 +21,6 @@ export async function POST(request: NextRequest) {
     }
 
     const resourceTitle = title?.trim() || "Web Resource";
-
-    // Insert pending resource. We let the Webhook/Edge Function extract the HTML via readability.
-    // However, the Edge Function expects `full_text`.
-    // Wait, the edge function needs to fetch the URL if full_text is empty, but we can do simple HTML fetch here.
     
     let rawText = "";
     try {
@@ -33,14 +30,31 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Failed to fetch URL" }, { status: 400 });
     }
 
+    // Save a .url bookmark file to Google Drive
+    let driveUrl: string | undefined;
+    try {
+      const bookmarkContent = `[InternetShortcut]\nURL=${url}`;
+      const buffer = Buffer.from(bookmarkContent);
+      const driveRes = await uploadDocumentToWorkspace(
+        `${workspaceId}/${resourceTitle}.url`,
+        "application/octet-stream",
+        buffer,
+        SHARED_FOLDER_ID!
+      );
+      driveUrl = driveRes.webViewLink || undefined;
+    } catch (driveErr) {
+      console.error("[Drive] Bookmark upload failed:", driveErr);
+    }
+
     const [inserted] = await db.insert(resources).values({
       workspaceId,
       addedBy: user.id,
       type: "url",
       url,
       title: resourceTitle,
-      fullText: rawText, // we dump the raw HTML here, the edge function can use Readability or Gemini can handle it.
+      fullText: rawText,
       status: "pending",
+      metadata: driveUrl ? { driveUrl } : undefined,
     }).returning();
 
     return Response.json({ ok: true, resource: inserted });

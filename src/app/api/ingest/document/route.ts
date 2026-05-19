@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/client";
 import { resources } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
+import { uploadDocumentToWorkspace, SHARED_FOLDER_ID } from "@/lib/drive";
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,6 +47,20 @@ export async function POST(request: NextRequest) {
 
     const resourceTitle = title || file.name.replace(/\.[^.]+$/, "");
 
+    // Upload to Google Drive
+    let driveUrl: string | undefined;
+    try {
+      const driveRes = await uploadDocumentToWorkspace(
+        `${workspaceId}/${resourceTitle}.${file.name.split('.').pop()}`,
+        file.type,
+        buffer,
+        SHARED_FOLDER_ID!
+      );
+      driveUrl = driveRes.webViewLink || undefined;
+    } catch (driveErr) {
+      console.error("[Drive] Upload failed, continuing without Drive link:", driveErr);
+    }
+
     // Insert pending resource. The Edge function will handle AI enrichment.
     const [inserted] = await db.insert(resources).values({
       workspaceId,
@@ -54,6 +69,7 @@ export async function POST(request: NextRequest) {
       title: resourceTitle,
       fullText: rawText.trim(),
       status: "pending",
+      metadata: driveUrl ? { driveUrl } : undefined,
     }).returning();
 
     return Response.json({ ok: true, resource: inserted });
