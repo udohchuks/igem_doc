@@ -4,6 +4,7 @@ import { google } from "googleapis";
 // This requires NO user consent screens, domains, or deployments!
 
 let authClient: any;
+let driveInitialized = false;
 
 try {
   if (process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON) {
@@ -12,11 +13,10 @@ try {
       credentials,
       scopes: ["https://www.googleapis.com/auth/drive"],
     });
-  } else {
-    console.warn("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not set. Drive API will fail.");
+    driveInitialized = true;
   }
 } catch (error) {
-  console.error("Failed to parse Service Account JSON:", error);
+  console.warn("Google Drive init failed:", error);
 }
 
 export const drive = google.drive({
@@ -25,6 +25,7 @@ export const drive = google.drive({
 });
 
 export const SHARED_FOLDER_ID = process.env.GOOGLE_DRIVE_SHARED_FOLDER_ID;
+export const isDriveReady = driveInitialized && !!SHARED_FOLDER_ID;
 
 /**
  * Creates a folder within the shared Google Drive workspace.

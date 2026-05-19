@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/client";
 import { resources } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { uploadDocumentToWorkspace, SHARED_FOLDER_ID } from "@/lib/drive";
+import { uploadDocumentToWorkspace, SHARED_FOLDER_ID, isDriveReady } from "@/lib/drive";
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,18 +47,20 @@ export async function POST(request: NextRequest) {
 
     const resourceTitle = title || file.name.replace(/\.[^.]+$/, "");
 
-    // Upload to Google Drive
+    // Upload to Google Drive (only if configured)
     let driveUrl: string | undefined;
-    try {
-      const driveRes = await uploadDocumentToWorkspace(
-        `${workspaceId}/${resourceTitle}.${file.name.split('.').pop()}`,
-        file.type,
-        buffer,
-        SHARED_FOLDER_ID!
-      );
-      driveUrl = driveRes.webViewLink || undefined;
-    } catch (driveErr) {
-      console.error("[Drive] Upload failed, continuing without Drive link:", driveErr);
+    if (isDriveReady) {
+      try {
+        const driveRes = await uploadDocumentToWorkspace(
+          `${workspaceId}/${resourceTitle}.${file.name.split('.').pop()}`,
+          file.type,
+          buffer,
+          SHARED_FOLDER_ID!
+        );
+        driveUrl = driveRes.webViewLink || undefined;
+      } catch (driveErr) {
+        console.error("[Drive] Upload failed, continuing without Drive link:", driveErr);
+      }
     }
 
     // Insert pending resource. The Edge function will handle AI enrichment.

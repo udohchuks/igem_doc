@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/client";
 import { resources } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { uploadDocumentToWorkspace, SHARED_FOLDER_ID } from "@/lib/drive";
+import { uploadDocumentToWorkspace, SHARED_FOLDER_ID, isDriveReady } from "@/lib/drive";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,20 +30,22 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Failed to fetch URL" }, { status: 400 });
     }
 
-    // Save a .url bookmark file to Google Drive
+    // Save a .url bookmark file to Google Drive (only if configured)
     let driveUrl: string | undefined;
-    try {
-      const bookmarkContent = `[InternetShortcut]\nURL=${url}`;
-      const buffer = Buffer.from(bookmarkContent);
-      const driveRes = await uploadDocumentToWorkspace(
-        `${workspaceId}/${resourceTitle}.url`,
-        "application/octet-stream",
-        buffer,
-        SHARED_FOLDER_ID!
-      );
-      driveUrl = driveRes.webViewLink || undefined;
-    } catch (driveErr) {
-      console.error("[Drive] Bookmark upload failed:", driveErr);
+    if (isDriveReady) {
+      try {
+        const bookmarkContent = `[InternetShortcut]\nURL=${url}`;
+        const buffer = Buffer.from(bookmarkContent);
+        const driveRes = await uploadDocumentToWorkspace(
+          `${workspaceId}/${resourceTitle}.url`,
+          "application/octet-stream",
+          buffer,
+          SHARED_FOLDER_ID!
+        );
+        driveUrl = driveRes.webViewLink || undefined;
+      } catch (driveErr) {
+        console.error("[Drive] Bookmark upload failed:", driveErr);
+      }
     }
 
     const [inserted] = await db.insert(resources).values({

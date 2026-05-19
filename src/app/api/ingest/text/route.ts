@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/client";
 import { resources } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { uploadDocumentToWorkspace, SHARED_FOLDER_ID } from "@/lib/drive";
+import { uploadDocumentToWorkspace, SHARED_FOLDER_ID, isDriveReady } from "@/lib/drive";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,19 +22,21 @@ export async function POST(request: NextRequest) {
 
     const resourceTitle = title?.trim() || "Untitled Note";
 
-    // Save note to Google Drive as .txt
+    // Save note to Google Drive as .txt (only if configured)
     let driveUrl: string | undefined;
-    try {
-      const buffer = Buffer.from(text.trim(), "utf-8");
-      const driveRes = await uploadDocumentToWorkspace(
-        `${workspaceId}/${resourceTitle}.txt`,
-        "text/plain",
-        buffer,
-        SHARED_FOLDER_ID!
-      );
-      driveUrl = driveRes.webViewLink || undefined;
-    } catch (driveErr) {
-      console.error("[Drive] Note upload failed:", driveErr);
+    if (isDriveReady) {
+      try {
+        const buffer = Buffer.from(text.trim(), "utf-8");
+        const driveRes = await uploadDocumentToWorkspace(
+          `${workspaceId}/${resourceTitle}.txt`,
+          "text/plain",
+          buffer,
+          SHARED_FOLDER_ID!
+        );
+        driveUrl = driveRes.webViewLink || undefined;
+      } catch (driveErr) {
+        console.error("[Drive] Note upload failed:", driveErr);
+      }
     }
 
     // Insert pending resource
