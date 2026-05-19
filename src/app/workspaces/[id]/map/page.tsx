@@ -23,14 +23,21 @@ export default async function MapViewPage({ params }: { params: Promise<{ id: st
     id: r.id,
     title: r.title,
     group: r.tags && r.tags.length > 0 ? r.tags[0] : 'untagged',
-    val: 1
+    type: r.type,
+    summary: r.summary || undefined,
+    tags: r.tags || [],
+    createdAt: r.createdAt ? r.createdAt.toISOString() : undefined,
+    url: r.url || undefined
   }))
 
   const links = allLinks.map(l => ({
     source: l.sourceId,
     target: l.targetId,
     type: l.type
-  }))
+  })).filter(link => {
+    // Only include links where both source and target are present in this workspace
+    return resourceIds.includes(link.source) && resourceIds.includes(link.target)
+  })
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 h-full flex flex-col min-h-0">
@@ -39,7 +46,7 @@ export default async function MapViewPage({ params }: { params: Promise<{ id: st
         <p className="text-gray-500 text-xs sm:text-sm">Visualizing AI-detected semantic relationships.</p>
       </div>
       
-      <MapGraph nodes={nodes} links={links} />
+      <MapGraph nodes={nodes} links={links} workspaceId={workspaceId} />
     </div>
   )
 }

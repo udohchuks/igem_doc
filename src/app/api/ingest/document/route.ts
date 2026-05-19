@@ -1,14 +1,14 @@
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/client";
-import { resources } from "@/lib/db/schema";
+import { resources, activityLog } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { uploadDocumentToWorkspace, SHARED_FOLDER_ID, isDriveReady } from "@/lib/drive";
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfParse: any = await import("pdf-parse" as any);
-  const parse = pdfParse.default ?? pdfParse;
-  const data = await parse(buffer);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PDFParse } = require("pdf-parse");
+  const parser = new PDFParse({ data: buffer });
+  await parser.load();
+  const data = await parser.getText();
   return data.text;
 }
 
@@ -47,20 +47,26 @@ export async function POST(request: NextRequest) {
 
     const resourceTitle = title || file.name.replace(/\.[^.]+$/, "");
 
-    // Upload to Google Drive (only if configured)
-    let driveUrl: string | undefined;
-    if (isDriveReady) {
-      try {
-        const driveRes = await uploadDocumentToWorkspace(
-          `${workspaceId}/${resourceTitle}.${file.name.split('.').pop()}`,
-          file.type,
-          buffer,
-          SHARED_FOLDER_ID!
-        );
-        driveUrl = driveRes.webViewLink || undefined;
-      } catch (driveErr) {
-        console.error("[Drive] Upload failed, continuing without Drive link:", driveErr);
+    // Upload to Supabase Storage
+    let storageUrl: string | undefined;
+    try {
+      const fileName = `${workspaceId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const { error: uploadError } = await supabase.storage
+        .from('workspace-files')
+        .upload(fileName, file, { contentType: file.type, upsert: true });
+        
+      if (uploadError) {
+        console.error("[Storage] Upload error details:", uploadError);
+        throw uploadError;
       }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('workspace-files')
+        .getPublicUrl(fileName);
+        
+      storageUrl = publicUrlData.publicUrl;
+    } catch (storageErr) {
+      console.error("[Storage] Upload failed, continuing without storage link:", storageErr);
     }
 
     // Insert pending resource. The Edge function will handle AI enrichment.
@@ -71,8 +77,15 @@ export async function POST(request: NextRequest) {
       title: resourceTitle,
       fullText: rawText.trim(),
       status: "pending",
-      metadata: driveUrl ? { driveUrl } : undefined,
+      metadata: storageUrl ? { storageUrl } : undefined,
     }).returning();
+
+    await db.insert(activityLog).values({
+      workspaceId,
+      resourceId: inserted.id,
+      userId: user.id,
+      action: "added_resource",
+    });
 
     return Response.json({ ok: true, resource: inserted });
   } catch (err: any) {

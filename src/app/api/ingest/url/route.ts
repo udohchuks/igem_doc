@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/client";
-import { resources } from "@/lib/db/schema";
+import { resources, activityLog } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { uploadDocumentToWorkspace, SHARED_FOLDER_ID, isDriveReady } from "@/lib/drive";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,22 +29,25 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Failed to fetch URL" }, { status: 400 });
     }
 
-    // Save a .url bookmark file to Google Drive (only if configured)
-    let driveUrl: string | undefined;
-    if (isDriveReady) {
-      try {
-        const bookmarkContent = `[InternetShortcut]\nURL=${url}`;
-        const buffer = Buffer.from(bookmarkContent);
-        const driveRes = await uploadDocumentToWorkspace(
-          `${workspaceId}/${resourceTitle}.url`,
-          "application/octet-stream",
-          buffer,
-          SHARED_FOLDER_ID!
-        );
-        driveUrl = driveRes.webViewLink || undefined;
-      } catch (driveErr) {
-        console.error("[Drive] Bookmark upload failed:", driveErr);
-      }
+    // Save a .url bookmark file to Supabase Storage
+    let storageUrl: string | undefined;
+    try {
+      const bookmarkContent = `[InternetShortcut]\nURL=${url}`;
+      const fileName = `${workspaceId}/${Date.now()}-${resourceTitle.replace(/[^a-zA-Z0-9.-]/g, '_')}.url`;
+      const blob = new Blob([bookmarkContent], { type: "text/plain" });
+      const { error: uploadError } = await supabase.storage
+        .from('workspace-files')
+        .upload(fileName, blob, { contentType: "text/plain", upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('workspace-files')
+        .getPublicUrl(fileName);
+        
+      storageUrl = publicUrlData.publicUrl;
+    } catch (storageErr) {
+      console.error("[Storage] Bookmark upload failed:", storageErr);
     }
 
     const [inserted] = await db.insert(resources).values({
@@ -56,8 +58,15 @@ export async function POST(request: NextRequest) {
       title: resourceTitle,
       fullText: rawText,
       status: "pending",
-      metadata: driveUrl ? { driveUrl } : undefined,
+      metadata: storageUrl ? { storageUrl } : undefined,
     }).returning();
+
+    await db.insert(activityLog).values({
+      workspaceId,
+      resourceId: inserted.id,
+      userId: user.id,
+      action: "added_resource",
+    });
 
     return Response.json({ ok: true, resource: inserted });
   } catch (err: any) {

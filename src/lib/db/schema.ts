@@ -113,3 +113,19 @@ export const activityLog = pgTable("activity_log", {
   index("activity_workspace_idx").on(table.workspaceId),
   index("activity_resource_idx").on(table.resourceId),
 ]);
+
+// ─── Journal Contributions ──────────────────────────────────────────────────────
+
+export const journalContributions = pgTable("journal_contributions", {
+  id:          uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  userId:      uuid("user_id").notNull(), // References auth.users from Supabase
+  userName:    text("user_name").notNull(), // E.g., user email or full name
+  content:     text("content").notNull(),
+  date:        text("date").notNull(), // Grouped by day, format "YYYY-MM-DD"
+  fileName:    text("file_name"), // Optional original file name if uploaded
+  createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("journal_contrib_workspace_idx").on(table.workspaceId),
+  index("journal_contrib_date_idx").on(table.date),
+]);

@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db/client";
-import { resources } from "@/lib/db/schema";
+import { resources, activityLog } from "@/lib/db/schema";
 import { createClient } from "@/lib/supabase/server";
-import { uploadDocumentToWorkspace, SHARED_FOLDER_ID, isDriveReady } from "@/lib/drive";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,21 +21,24 @@ export async function POST(request: NextRequest) {
 
     const resourceTitle = title?.trim() || "Untitled Note";
 
-    // Save note to Google Drive as .txt (only if configured)
-    let driveUrl: string | undefined;
-    if (isDriveReady) {
-      try {
-        const buffer = Buffer.from(text.trim(), "utf-8");
-        const driveRes = await uploadDocumentToWorkspace(
-          `${workspaceId}/${resourceTitle}.txt`,
-          "text/plain",
-          buffer,
-          SHARED_FOLDER_ID!
-        );
-        driveUrl = driveRes.webViewLink || undefined;
-      } catch (driveErr) {
-        console.error("[Drive] Note upload failed:", driveErr);
-      }
+    // Save note to Supabase Storage as .txt
+    let storageUrl: string | undefined;
+    try {
+      const fileName = `${workspaceId}/${Date.now()}-${resourceTitle.replace(/[^a-zA-Z0-9.-]/g, '_')}.txt`;
+      const blob = new Blob([text.trim()], { type: "text/plain" });
+      const { error: uploadError } = await supabase.storage
+        .from('workspace-files')
+        .upload(fileName, blob, { contentType: "text/plain", upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('workspace-files')
+        .getPublicUrl(fileName);
+        
+      storageUrl = publicUrlData.publicUrl;
+    } catch (storageErr) {
+      console.error("[Storage] Note upload failed:", storageErr);
     }
 
     // Insert pending resource
@@ -47,8 +49,15 @@ export async function POST(request: NextRequest) {
       title: resourceTitle,
       fullText: text.trim(),
       status: "pending",
-      metadata: driveUrl ? { driveUrl } : undefined,
+      metadata: storageUrl ? { storageUrl } : undefined,
     }).returning();
+
+    await db.insert(activityLog).values({
+      workspaceId,
+      resourceId: inserted.id,
+      userId: user.id,
+      action: "added_resource",
+    });
 
     return Response.json({ ok: true, resource: inserted });
   } catch (err: any) {
