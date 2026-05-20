@@ -27,7 +27,7 @@ export default async function MapViewPage({ params }: { params: Promise<{ id: st
     summary: r.summary || undefined,
     tags: r.tags || [],
     createdAt: r.createdAt ? r.createdAt.toISOString() : undefined,
-    url: r.url || undefined
+    url: r.url || (r.metadata as any)?.storageUrl || undefined
   }))
 
   const links = allLinks.map(l => ({

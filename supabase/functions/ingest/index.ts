@@ -80,15 +80,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // If it's a URL, the full_text currently contains raw HTML
-    let textToProcess = record.full_text
-    if (record.type === 'url') {
-      textToProcess = extractHtmlText(record.full_text, record.url)
+    let summary = record.summary
+    let tags = record.tags
+
+    if (!summary || summary.trim().length === 0) {
+      let textToProcess = record.full_text
+      if (record.type === 'url') {
+        textToProcess = extractHtmlText(record.full_text, record.url)
+      }
+      const result = await summarizeAndTag(textToProcess)
+      summary = result.summary
+      tags = result.tags
     }
 
-    const { summary, tags } = await summarizeAndTag(textToProcess)
     const embedding = await embedText(`${record.title}\n\n${summary}`)
-
     const vectorStr = `[${embedding.join(",")}]`
 
     // 1. Update resource

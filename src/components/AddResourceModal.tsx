@@ -18,11 +18,19 @@ export function AddResourceModal({ workspaceId, children }: { workspaceId: strin
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Manual summary states for restricted websites
+  const [showManualSummary, setShowManualSummary] = useState(false)
+  const [manualSummary, setManualSummary] = useState('')
+  const [manualTags, setManualTags] = useState('')
+
   const resetState = () => {
     setIsLoading(false)
     setError(null)
     setSelectedFile(null)
     setIsDragging(false)
+    setShowManualSummary(false)
+    setManualSummary('')
+    setManualTags('')
   }
 
   const handleClose = () => {
@@ -46,7 +54,13 @@ export function AddResourceModal({ workspaceId, children }: { workspaceId: strin
         res = await fetch('/api/ingest/url', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, title, workspaceId })
+          body: JSON.stringify({ 
+            url, 
+            title, 
+            workspaceId,
+            summary: showManualSummary ? manualSummary : undefined,
+            tags: showManualSummary ? manualTags : undefined
+          })
         })
       } else if (activeTab === 'upload') {
         if (!selectedFile) throw new Error('Please select a file to upload')
@@ -71,6 +85,9 @@ export function AddResourceModal({ workspaceId, children }: { workspaceId: strin
       const data = await res.json()
       
       if (!res.ok) {
+        if (res.status === 422 && data.requiresSummary) {
+          setShowManualSummary(true)
+        }
         throw new Error(data.error || 'Failed to add resource')
       }
 
@@ -137,16 +154,44 @@ export function AddResourceModal({ workspaceId, children }: { workspaceId: strin
               </div>
 
               {activeTab === 'link' && (
-                <div className="space-y-1.5 animate-in slide-in-from-right-4 duration-300">
-                  <label className="text-sm font-medium text-gray-300">URL <span className="text-red-400">*</span></label>
-                  <input 
-                    type="url" 
-                    name="url" 
-                    required
-                    placeholder="https://youtube.com/... or https://nature.com/..."
-                    className="w-full bg-white/[0.02] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.04] transition"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Supports any web page, research paper link, or YouTube video.</p>
+                <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-300">URL <span className="text-red-400">*</span></label>
+                    <input 
+                      type="url" 
+                      name="url" 
+                      required
+                      placeholder="https://youtube.com/... or https://nature.com/..."
+                      className="w-full bg-white/[0.02] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.04] transition"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Supports any web page, research paper link, or YouTube video.</p>
+                  </div>
+
+                  {showManualSummary && (
+                    <div className="space-y-4 pt-4 border-t border-white/[0.06] animate-in fade-in duration-300">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-gray-300">Manual Summary <span className="text-red-400">*</span></label>
+                        <textarea 
+                          required
+                          rows={3}
+                          value={manualSummary}
+                          onChange={(e) => setManualSummary(e.target.value)}
+                          placeholder="Provide a 2-3 sentence summary of what this website contains..."
+                          className="w-full bg-white/[0.02] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.04] transition resize-none text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-gray-300">Tags (Optional, comma-separated)</label>
+                        <input 
+                          type="text"
+                          value={manualTags}
+                          onChange={(e) => setManualTags(e.target.value)}
+                          placeholder="biology, dna, cloning"
+                          className="w-full bg-white/[0.02] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.04] transition text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

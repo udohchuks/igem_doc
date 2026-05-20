@@ -96,8 +96,15 @@ export async function POST(request: NextRequest) {
           throw new Error("No text to process");
         }
 
-        // 1. Summarize and Tag
-        const { summary, tags } = await summarizeAndTag(textToProcess);
+        // 1. Summarize and Tag (only if not already provided)
+        let summary = record.summary;
+        let tags = record.tags;
+
+        if (!summary || summary.trim().length === 0) {
+          const result = await summarizeAndTag(textToProcess);
+          summary = result.summary;
+          tags = result.tags;
+        }
         
         // 2. Embed
         const embeddingData = await embedText(`${record.title}\n\n${summary}\n\n${textToProcess.slice(0, 2000)}`);

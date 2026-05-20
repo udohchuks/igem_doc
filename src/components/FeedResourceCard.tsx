@@ -82,10 +82,18 @@ export function FeedResourceCard({ resource }: ResourceProps) {
           )}
         </div>
         <div className="flex items-center gap-3">
-          {resource.metadata && (resource.metadata as any).storageUrl && (
-            <a href={(resource.metadata as any).storageUrl} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 font-medium underline transition-colors">
-              Open Document
-            </a>
+          {resource.type === 'url' ? (
+            resource.url ? (
+              <a href={resource.url} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 font-medium underline transition-colors">
+                Open Link
+              </a>
+            ) : null
+          ) : (
+            resource.metadata && (resource.metadata as any).storageUrl ? (
+              <a href={(resource.metadata as any).storageUrl} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 font-medium underline transition-colors">
+                Open Document
+              </a>
+            ) : null
           )}
           <div className="text-xs text-gray-500 font-medium whitespace-nowrap">
             {formatDistanceToNow(new Date(resource.createdAt), { addSuffix: true })}
