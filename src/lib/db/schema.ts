@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, pgEnum, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, jsonb, pgEnum, index, primaryKey, integer } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // ─── Enums ─────────────────────────────────────────────────────────────────────
@@ -128,4 +128,20 @@ export const journalContributions = pgTable("journal_contributions", {
 }, (table) => [
   index("journal_contrib_workspace_idx").on(table.workspaceId),
   index("journal_contrib_date_idx").on(table.date),
+]);
+
+export const apiLogs = pgTable("api_logs", {
+  id:           uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId:  uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+  service:      text("service").notNull(), // "gemini" | "voyage"
+  endpoint:     text("endpoint").notNull(), // e.g. "generateContent", "embeddings"
+  status:       text("status").notNull(), // "success" | "error"
+  latencyMs:    integer("latency_ms"),
+  tokensUsed:   integer("tokens_used"),
+  errorMessage: text("error_message"),
+  createdAt:    timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("api_logs_service_idx").on(table.service),
+  index("api_logs_status_idx").on(table.status),
+  index("api_logs_created_at_idx").on(table.createdAt),
 ]);

@@ -4,6 +4,7 @@ import { journalContributions } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
+import { logApiCall } from "@/lib/db/logger";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -58,10 +59,33 @@ Contributions:
 ${compiledUpdates}
 """`;
 
-    const response = await genai.models.generateContent({
-      model: "gemini-3.1-flash-lite",
-      contents: prompt,
-    });
+    const geminiStart = Date.now();
+    let response;
+    try {
+      response = await genai.models.generateContent({
+        model: "gemini-3.1-flash-lite",
+        contents: prompt,
+      });
+      const latencyMs = Date.now() - geminiStart;
+      await logApiCall({
+        workspaceId,
+        service: "gemini",
+        endpoint: "journalAggregate",
+        status: "success",
+        latencyMs,
+      });
+    } catch (e: any) {
+      const latencyMs = Date.now() - geminiStart;
+      await logApiCall({
+        workspaceId,
+        service: "gemini",
+        endpoint: "journalAggregate",
+        status: "error",
+        latencyMs,
+        errorMessage: e.message || String(e),
+      });
+      throw e;
+    }
 
     const raw = response.text || "{}";
     const jsonStr = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();

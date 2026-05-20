@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { sql as drizzleSql } from "drizzle-orm";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
+import { logApiCall } from "@/lib/db/logger";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -24,20 +25,58 @@ export async function POST(request: NextRequest) {
     const latestMessage = messages[messages.length - 1].content;
 
     // 1. Perform Hybrid Search to get context
-    const embeddingResponse = await fetch('https://api.voyageai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        input: [latestMessage],
-        model: 'voyage-4-lite'
-      })
-    });
-    
-    const embeddingData = await embeddingResponse.json();
-    const queryEmbedding = embeddingData.data?.[0]?.embedding;
+    const voyageStart = Date.now();
+    let queryEmbedding: number[] | null = null;
+    try {
+      const embeddingResponse = await fetch('https://api.voyageai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          input: [latestMessage],
+          model: 'voyage-4-lite'
+        })
+      });
+      
+      const latencyMs = Date.now() - voyageStart;
+      if (!embeddingResponse.ok) {
+        const errText = await embeddingResponse.text();
+        await logApiCall({
+          workspaceId,
+          service: "voyage",
+          endpoint: "embeddings",
+          status: "error",
+          latencyMs,
+          errorMessage: `HTTP ${embeddingResponse.status}: ${errText}`,
+        });
+        throw new Error(`Voyage API error: ${errText}`);
+      }
+      
+      const embeddingData = await embeddingResponse.json();
+      queryEmbedding = embeddingData.data?.[0]?.embedding;
+      
+      await logApiCall({
+        workspaceId,
+        service: "voyage",
+        endpoint: "embeddings",
+        status: "success",
+        latencyMs,
+      });
+    } catch (e: any) {
+      const latencyMs = Date.now() - voyageStart;
+      await logApiCall({
+        workspaceId,
+        service: "voyage",
+        endpoint: "embeddings",
+        status: "error",
+        latencyMs,
+        errorMessage: e.message || String(e),
+      });
+      throw e;
+    }
+
     const vectorStr = `[${queryEmbedding?.join(",")}]`;
 
     const hybridQuery = drizzleSql`
@@ -85,16 +124,39 @@ CONTEXT RESOURCES:
 ${contextText}`;
 
     // 3. Stream Response
-    const responseStream = await genai.models.generateContentStream({
-      model: "gemini-3.1-flash-lite",
-      contents: [
-        { role: "user", parts: [{ text: systemPrompt }] },
-        ...messages.map((m: any) => ({
-          role: m.role === "assistant" ? "model" : "user",
-          parts: [{ text: m.content }]
-        }))
-      ]
-    });
+    const geminiStart = Date.now();
+    let responseStream;
+    try {
+      responseStream = await genai.models.generateContentStream({
+        model: "gemini-3.1-flash-lite",
+        contents: [
+          { role: "user", parts: [{ text: systemPrompt }] },
+          ...messages.map((m: any) => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content }]
+          }))
+        ]
+      });
+      const latencyMs = Date.now() - geminiStart;
+      await logApiCall({
+        workspaceId,
+        service: "gemini",
+        endpoint: "generateContentStream",
+        status: "success",
+        latencyMs,
+      });
+    } catch (e: any) {
+      const latencyMs = Date.now() - geminiStart;
+      await logApiCall({
+        workspaceId,
+        service: "gemini",
+        endpoint: "generateContentStream",
+        status: "error",
+        latencyMs,
+        errorMessage: e.message || String(e),
+      });
+      throw e;
+    }
 
     const encoder = new TextEncoder();
     

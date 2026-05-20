@@ -34,6 +34,7 @@ export default async function WorkspaceDetailLayout({
     { name: 'Timeline', href: `/workspaces/${workspaceId}/timeline`, icon: 'Clock' },
     { name: 'Map', href: `/workspaces/${workspaceId}/map`, icon: 'Network' },
     { name: 'Search', href: `/workspaces/${workspaceId}/search`, icon: 'Search' },
+    { name: 'API Monitor', href: `/workspaces/${workspaceId}/monitor`, icon: 'Activity' },
   ]
 
   return (

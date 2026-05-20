@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutList, Tags, Clock, Network, Search, Menu, X, ChevronLeft, Folder, BookOpen } from 'lucide-react'
+import { LayoutList, Tags, Clock, Network, Search, Menu, X, ChevronLeft, Folder, BookOpen, Activity } from 'lucide-react'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  LayoutList, Tags, Clock, Network, Search, Folder, BookOpen
+  LayoutList, Tags, Clock, Network, Search, Folder, BookOpen, Activity
 }
 
 export function SidebarLayout({

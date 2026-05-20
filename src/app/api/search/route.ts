@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { sql as drizzleSql } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
+import { logApiCall } from "@/lib/db/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,23 +20,61 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Semantic Search (Voyage AI)
-    const embeddingResponse = await fetch('https://api.voyageai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        input: [query],
-        model: 'voyage-4-lite'
-      })
-    });
-    
-    const embeddingData = await embeddingResponse.json();
-    const queryEmbedding = embeddingData.data?.[0]?.embedding;
-    if (!queryEmbedding) {
-      throw new Error("Failed to generate embedding for query");
+    const voyageStart = Date.now();
+    let queryEmbedding: number[] | null = null;
+    try {
+      const embeddingResponse = await fetch('https://api.voyageai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          input: [query],
+          model: 'voyage-4-lite'
+        })
+      });
+      
+      const latencyMs = Date.now() - voyageStart;
+      if (!embeddingResponse.ok) {
+        const errText = await embeddingResponse.text();
+        await logApiCall({
+          workspaceId,
+          service: "voyage",
+          endpoint: "embeddings",
+          status: "error",
+          latencyMs,
+          errorMessage: `HTTP ${embeddingResponse.status}: ${errText}`,
+        });
+        throw new Error(`Voyage API error: ${errText}`);
+      }
+      
+      const embeddingData = await embeddingResponse.json();
+      queryEmbedding = embeddingData.data?.[0]?.embedding;
+      if (!queryEmbedding) {
+        throw new Error("Failed to generate embedding for query");
+      }
+      
+      await logApiCall({
+        workspaceId,
+        service: "voyage",
+        endpoint: "embeddings",
+        status: "success",
+        latencyMs,
+      });
+    } catch (e: any) {
+      const latencyMs = Date.now() - voyageStart;
+      await logApiCall({
+        workspaceId,
+        service: "voyage",
+        endpoint: "embeddings",
+        status: "error",
+        latencyMs,
+        errorMessage: e.message || String(e),
+      });
+      throw e;
     }
+
     const vectorStr = `[${queryEmbedding.join(",")}]`;
 
     // 2. Hybrid Search using RRF (Reciprocal Rank Fusion)

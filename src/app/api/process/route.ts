@@ -4,6 +4,7 @@ import { resources, embeddings, connections } from "@/lib/db/schema";
 import { eq, and, sql as drizzleSql, ne } from "drizzle-orm";
 import * as cheerio from "cheerio";
 import { GoogleGenAI } from "@google/genai";
+import { logApiCall } from "@/lib/db/logger";
 
 // Ensure this route runs optimally without timeouts if possible.
 export const maxDuration = 60; // 1 minute max duration (Vercel limit for hobby is 10s or 60s depending on settings)
@@ -11,7 +12,8 @@ export const dynamic = "force-dynamic";
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-async function summarizeAndTag(text: string) {
+async function summarizeAndTag(text: string, workspaceId?: string) {
+  const startTime = Date.now();
   const prompt = `You are an AI assistant for a scientific knowledge management system.
 Given the following resource text, return a JSON object with exactly two keys:
 - "summary": A 2-3 sentence plain-language summary of the content.
@@ -29,6 +31,15 @@ ${text.slice(0, 15000)}
       contents: prompt,
     });
     
+    const latencyMs = Date.now() - startTime;
+    await logApiCall({
+      workspaceId,
+      service: "gemini",
+      endpoint: "summarizeAndTag",
+      status: "success",
+      latencyMs,
+    });
+
     const raw = response.text || "{}";
     const jsonStr = raw.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
     
@@ -37,33 +48,73 @@ ${text.slice(0, 15000)}
       summary: parsed.summary ?? "",
       tags: Array.isArray(parsed.tags) ? parsed.tags : []
     };
-  } catch (err) {
+  } catch (err: any) {
+    const latencyMs = Date.now() - startTime;
+    await logApiCall({
+      workspaceId,
+      service: "gemini",
+      endpoint: "summarizeAndTag",
+      status: "error",
+      latencyMs,
+      errorMessage: err.message || String(err),
+    });
     console.error("Gemini processing error:", err);
     return { summary: text.slice(0, 300) + "...", tags: [] };
   }
 }
 
-async function embedText(text: string) {
-  const res = await fetch('https://api.voyageai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      input: [text.slice(0, 24000)], // Voyage-4-lite context limit is around 32k tokens
-      model: 'voyage-4-lite'
-    })
-  });
-  
-  if (!res.ok) {
-    const err = await res.text();
+async function embedText(text: string, workspaceId?: string) {
+  const startTime = Date.now();
+  try {
+    const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.VOYAGE_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        input: [text.slice(0, 24000)], // Voyage-4-lite context limit is around 32k tokens
+        model: 'voyage-4-lite'
+      })
+    });
+    
+    const latencyMs = Date.now() - startTime;
+    if (!res.ok) {
+      const err = await res.text();
+      await logApiCall({
+        workspaceId,
+        service: "voyage",
+        endpoint: "embeddings",
+        status: "error",
+        latencyMs,
+        errorMessage: `HTTP ${res.status}: ${err}`,
+      });
+      console.error("Voyage AI error:", err);
+      return null;
+    }
+    
+    const data = await res.json();
+    await logApiCall({
+      workspaceId,
+      service: "voyage",
+      endpoint: "embeddings",
+      status: "success",
+      latencyMs,
+    });
+    return data.data?.[0]?.embedding;
+  } catch (err: any) {
+    const latencyMs = Date.now() - startTime;
+    await logApiCall({
+      workspaceId,
+      service: "voyage",
+      endpoint: "embeddings",
+      status: "error",
+      latencyMs,
+      errorMessage: err.message || String(err),
+    });
     console.error("Voyage AI error:", err);
     return null;
   }
-  
-  const data = await res.json();
-  return data.data?.[0]?.embedding;
 }
 
 export async function POST(request: NextRequest) {
@@ -101,13 +152,13 @@ export async function POST(request: NextRequest) {
         let tags = record.tags;
 
         if (!summary || summary.trim().length === 0) {
-          const result = await summarizeAndTag(textToProcess);
+          const result = await summarizeAndTag(textToProcess, record.workspaceId);
           summary = result.summary;
           tags = result.tags;
         }
         
         // 2. Embed
-        const embeddingData = await embedText(`${record.title}\n\n${summary}\n\n${textToProcess.slice(0, 2000)}`);
+        const embeddingData = await embedText(`${record.title}\n\n${summary}\n\n${textToProcess.slice(0, 2000)}`, record.workspaceId);
         
         if (!embeddingData) {
           throw new Error("Failed to generate embedding");
